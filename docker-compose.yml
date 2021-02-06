@@ -1,0 +1,92 @@
+version: "3"
+
+services:
+
+  webservice:
+    image: nginx:1.15-alpine
+    container_name: ${APP_NAME}_${APP_ENV}_webservice
+    depends_on:
+      - app
+    ports:
+      - "${DOCKER_WEBSERVICE_PORT-80}:80"
+      # - "${DOCKER_WEBSERVICE_SSL_PORT-443}:443"
+    volumes:
+      - ./:/app
+      - ./storage:/app/storage
+      - ./storage/app/public/media:/app/public/media
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/app.Dockerfile
+    image: api:latest
+    container_name: ${APP_NAME}_${APP_ENV}_app
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./:/app
+      - ./docker/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - ./docker/php-fpm/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    command: php-fpm
+
+  db:
+    image: postgres:11.5-alpine
+    container_name: ${APP_NAME}_${APP_ENV}_postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - /var/data/${APP_NAME}/db:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6.0.6-alpine
+    container_name: ${APP_NAME}_${APP_ENV}_redis
+
+  queue_runner:
+    image: api:latest
+    container_name: ${APP_NAME}_${APP_ENV}_queue_runner
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - app
+      - redis
+      - db
+    volumes:
+      - ./:/app
+    command: php /app/artisan queue:work --verbose
+
+  schedule_runner:
+    image: api:latest
+    container_name: ${APP_NAME}_${APP_ENV}_schedule_runner
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - app
+      - redis
+      - db
+    volumes:
+      - ./:/app
+    command: /bin/sh -c "while [ true ]; do (php /app/artisan schedule:run --verbose --no-interaction &); sleep 60; done"
+
+  adminer:
+    image: adminer
+    container_name: ${APP_NAME}_${APP_ENV}_adminer
+    ports:
+      - "${DOCKER_ADMINER_PORT-8877}:8080"
+
+  composer:
+    image: composer:latest
+    container_name: ${APP_NAME}_${APP_ENV}_composer
+    working_dir: /app
+    restart: "no"
+    environment:
+      SSH_AUTH_SOCK: /ssh-auth.sock
+    volumes:
+      - ./:/app
+      - ${HOME}/.composer:/tmp
+      - ${SSH_AUTH_SOCK}:/ssh-auth.sock
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
