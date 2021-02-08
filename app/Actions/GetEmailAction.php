@@ -12,6 +12,8 @@ class GetEmailAction
 
     public function handle(Email $email)
     {
+        $email->load('attachments');
+
         return $email;
     }
 

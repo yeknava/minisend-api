@@ -16,45 +16,29 @@ class EmailsListAction
     public function rules()
     {
         return [
-            'subject' => 'nullable|string|max:200',
-            'sender' => 'nullable|email',
-            'recipient' => 'nullable|email',
+            'query' => 'nullable|string|max:200',
         ];
     }
 
-    public function handle(
-        string $subject = null,
-        string $sender = null,
-        string $recipient = null
-    ) {
-        $query = Email::query()->select([
+    public function handle(string $query = null) {
+        $emailQuery = Email::query()->select([
             'id', 'subject', 'sender',
             'recipient', 'text', 'status',
             'created_at',
         ]);
 
-        if ($subject) {
-            $query->where('subject', 'like', '%' . $subject . '%');
+        if (!empty($query)) {
+            $emailQuery->where('subject', 'like', $query. '%')
+                ->orWhere('sender', 'like', $query . '%')
+                ->orWhere('recipient', 'like', $query . '%');
         }
 
-        if ($sender) {
-            $query->where('sender', 'like', '%' . $sender . '%');
-        }
-
-        if ($recipient) {
-            $query->where('recipient', 'like', '%' . $recipient . '%');
-        }
-
-        return $query->paginate(20);
+        return $emailQuery->orderBy('id', 'desc')->paginate(15);
     }
 
     public function asController(Request $request) :?LengthAwarePaginator
     {
-        return $this->handle(
-            $request->query('subject'),
-            $request->query('sender'),
-            $request->query('recipient')
-        );
+        return $this->handle($request->query('query'));
     }
 
     public function jsonResponse(?LengthAwarePaginator $emails)

@@ -15,6 +15,7 @@ class Attachment extends Model
         'path',
         'filename',
         'mimetype',
+        'extension',
         'driver',
         'sha1',
         'filesize',

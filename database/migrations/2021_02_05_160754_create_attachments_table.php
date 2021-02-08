@@ -20,7 +20,7 @@ class CreateAttachmentsTable extends Migration
             $table->string('title', 100)->nullable();
             $table->string('driver')->nullable();
 			$table->string('filename', 255);
-			$table->string('extension', 6);
+			$table->string('extension', 12);
 			$table->string('mimetype', 30);
 			$table->string('path');
 			$table->string('sha1', 40);

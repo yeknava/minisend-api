@@ -7,7 +7,7 @@ use App\Models\Email;
 use App\Models\Attachment;
 use App\Http\Resources\EmailResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class NewEmailAction
@@ -21,8 +21,7 @@ class NewEmailAction
             'sender' => 'required|email',
             'recipient' => 'required|email',
             'text' => 'nullable|string|min:1',
-            'attachments' => 'array',
-            'attachments.*' => 'file|max:5'
+            'attachments.*' => 'file|max:10000'
         ];
     }
 
@@ -50,25 +49,23 @@ class NewEmailAction
         $email->text = strip_tags($email->text);
         $email->save();
 
-        $filePath = storage_path('app/attachments');
         $attachments = [];
 
         foreach ($files as $file) {
-            $name = uniqid() . mt_rand(1, 99999);
-            $path = $filePath . '/' . $name . '.' . $file->extension();
+            /** @var UploadedFile $file */
+            $file->store('attachments');
+            $path = storage_path('app/attachments/'.$file->hashName());
 
             $attachments[] = new Attachment([
                 'path' => $path,
-                'filename' => $name,
-                'mimetype' => mime_content_type($path),
+                'filename' => $file->getClientOriginalName(),
+                'mimetype' => $file->getClientMimeType(),
                 'driver' => 'local',
-                'extension' => 'jpg',
+                'extension' => $file->getExtension(),
                 'sha1' => sha1_file($path),
-                'filesize' => $file->filesize(),
+                'filesize' => $file->getSize(),
                 'uploader_ip' => $ip
             ]);
-
-            Storage::put($path, $file);
         }
 
         $email->attachments()->saveMany($attachments);
@@ -80,7 +77,7 @@ class NewEmailAction
 
     public function asController(Request $request): Email
     {
-        return $this->handle($request->input(), $request->allFiles(), request()->ip());
+        return $this->handle($request->input(), $request->file('attachments') ?? [], request()->ip());
     }
 
     public function jsonResponse(Email $email): EmailResource

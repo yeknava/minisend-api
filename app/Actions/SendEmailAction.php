@@ -2,8 +2,8 @@
 
 namespace App\Actions;
 
-use App\Mail\BaseMailer;
 use App\Models\Email;
+use App\Mail\BaseMailer;
 use Illuminate\Support\Facades\Mail;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -13,9 +13,12 @@ class SendEmailAction
 
     public function handle(Email $email)
     {
-        Mail::to($email->recipient)
-            ->send(new BaseMailer($email));
-        $email->status = Email::STATUS_POSTED;
-        $email->save();
+        $mailer = new BaseMailer($email);
+
+        foreach ($email->attachments as $attach) {
+            $mailer = $mailer->attach($attach->path);
+        }
+
+        Mail::to($email->recipient)->send($mailer);
     }
 }

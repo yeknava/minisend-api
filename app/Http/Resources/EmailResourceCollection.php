@@ -7,6 +7,8 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 class EmailResourceCollection extends ResourceCollection
 {
     public static $wrap = 'emails';
+    public $collects = EmailResource::class;
+
     /**
      * Transform the resource collection into an array.
      *

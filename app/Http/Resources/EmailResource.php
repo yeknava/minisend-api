@@ -15,6 +15,24 @@ class EmailResource extends JsonResource
      */
     public function toArray($request)
     {
-        return parent::toArray($request);
+        $response = parent::toArray($request);
+
+        if (!empty($response['status'])) {
+            $response['status'] = ucfirst($response['status']);
+        }
+
+        if (!empty($response['created_at'])) {
+            $response['created_at'] = $this->created_at->toDayDateTimeString();
+        }
+
+        if ($count = $this->resource->attachments()->count()) {
+            $response['has_attachment'] = true;
+            $response['attachment_count'] = $count;
+        } else {
+            $response['has_attachment'] = false;
+            $response['attachment_count'] = 0;
+        }
+
+        return $response;
     }
 }

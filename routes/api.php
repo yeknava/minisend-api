@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::get('emails/{email}/attachments/{attachment}', '\App\Actions\GetFileAction')->name('emails.attachments.view');
 Route::get('emails/{email}', '\App\Actions\GetEmailAction')->name('emails.view');
 Route::get('emails', '\App\Actions\EmailsListAction')->name('emails.list');
 Route::post('emails', '\App\Actions\NewEmailAction')->name('emails.new');
